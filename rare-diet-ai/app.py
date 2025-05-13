@@ -69,7 +69,7 @@ RESPONSE INSTRUCTIONS — PLEASE FOLLOW STRICTLY:
     "calories": 350,
     "protein": 32.5,
     "carbs": 15.0,
-    "fat": 12.0
+    "fat": 12.0,
     "sodium": 800
   }}
 }}
@@ -87,8 +87,15 @@ def generate_diet():
         meal_type = data.get("meal_type", "breakfast").lower()
         consumed = data.get("consumed_so_far", {})
 
-        # ... disease_info, prompt 생성 생략 ...
+        # ✅ 질병 정보 수집
+        disease_info = {}
+        for d in diseases:
+            disease_info[d.lower()] = process_disease(d)
 
+        # ✅ 프롬프트 생성
+        prompt = generate_prompt(user, meal_type, disease_info, consumed)
+
+        # ✅ Gemma 호출
         result = call_gemma_with_timeout(prompt, timeout=30)
 
         if "[TIMEOUT]" in result or "[ERROR]" in result:
@@ -113,3 +120,8 @@ def generate_diet():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+# ✅ Flask 실행
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
