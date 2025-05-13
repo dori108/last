@@ -15,7 +15,13 @@ CORS(app)
 
 def generate_prompt(user_info, meal_type, disease_info, consumed_so_far):
     disease_texts = []
-    remaining_nutrients = {"protein": 0, "fat": 0, "carbohydrates": 0, "sodium": 0}
+    remaining_nutrients = {  
+        "calories": 0,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 0,
+        "sodium":0
+        }
 
     for d in user_info["disease"]:
         d_data = disease_info.get(d.lower())
@@ -34,7 +40,7 @@ def generate_prompt(user_info, meal_type, disease_info, consumed_so_far):
     prompt = f"""
 You are a professional nutritionist and your task is to recommend a {meal_type.upper()} meal for a specific user.
 You will be provided with health details, dietary restrictions, and ingredient availability.
-Your response must ONLY be a well-formatted JSON object following the exact structure shown below.
+Your response must ONLY be a formatted JSON object following the exact structure shown below.
 
 User Information:
 - Age: {user_info['age']}
@@ -62,8 +68,9 @@ RESPONSE INSTRUCTIONS — PLEASE FOLLOW STRICTLY:
 
  REQUIRED JSON FORMAT (copy exactly):
 {{
-  "meal": {{
+  {
     "dish": "Grilled Chicken Salad",
+    "meal_type": _selectedMealType,
     "menu": ["Grilled chicken breast", "Mixed greens", "Cherry tomatoes", "Olive oil dressing"],
     "notes": ["Low-carb, high-protein meal suitable for most dietary restrictions."],
     "calories": 350,
@@ -71,7 +78,7 @@ RESPONSE INSTRUCTIONS — PLEASE FOLLOW STRICTLY:
     "carbs": 15.0,
     "fat": 12.0,
     "sodium": 800
-  }}
+  }
 }}
 
 Strictly valid JSON, without any extra text
@@ -87,15 +94,12 @@ def generate_diet():
         meal_type = data.get("meal_type", "breakfast").lower()
         consumed = data.get("consumed_so_far", {})
 
-        # ✅ 질병 정보 수집
         disease_info = {}
         for d in diseases:
             disease_info[d.lower()] = process_disease(d)
 
-        # ✅ 프롬프트 생성
         prompt = generate_prompt(user, meal_type, disease_info, consumed)
 
-        # ✅ Gemma 호출
         result = call_gemma_with_timeout(prompt, timeout=30)
 
         if "[TIMEOUT]" in result or "[ERROR]" in result:
