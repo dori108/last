@@ -17,13 +17,22 @@ except Exception as e:
     generator = None
 
 def call_gemma(prompt: str, max_tokens: int = 512) -> str:
-    if not generator:
-        return "{}"
-    try:
-        result = generator(prompt, max_new_tokens=max_tokens, temperature=0.7, do_sample=True)[0]["generated_text"]
-        return result
-    except Exception:
-        return "{}"
+    print("[MOCK] Returning fake response.")
+    return '''
+    {
+      "meal": {
+        "dish": "Mock Chicken Salad",
+        "menu": ["Mock chicken", "Lettuce"],
+        "notes": ["Just a mock response."],
+        "calories": 300,
+        "protein": 25,
+        "carbs": 10,
+        "fat": 5,
+        "sodium": 300
+      }
+    }
+    '''
+
 
 def extract_json(text: str) -> dict | None:
     stack = []
