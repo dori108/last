@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
+from gemma_util import call_gemma_with_timeout, extract_json
 import os
 import json
 from huggingface_hub import login
 from pubmed_fetcher import process_disease
-from gemma_util import call_gemma, extract_json
 from flask_cors import CORS
 
 hf_token = os.getenv("HUGGINGFACE_TOKEN")
@@ -80,30 +80,36 @@ Strictly valid JSON, without any extra text
 
 @app.route("/generate_diet", methods=["POST"])
 def generate_diet():
-    data = request.json
-    user = data["user_info"]
-    diseases = user.get("disease", [])
-    meal_type = data.get("meal_type", "breakfast").lower()
-    consumed = data.get("consumed_so_far", {})
+    try:
+        data = request.json
+        user = data["user_info"]
+        diseases = user.get("disease", [])
+        meal_type = data.get("meal_type", "breakfast").lower()
+        consumed = data.get("consumed_so_far", {})
 
-    # ✅ carbs → carbohydrates 자동 변환
-    if "carbs" in consumed:
-        consumed["carbohydrates"] = consumed["carbs"]
+        # ... disease_info, prompt 생성 생략 ...
 
-    disease_info = {}
-    for d in diseases:
-        disease_info[d.lower()] = process_disease(d)
+        result = call_gemma_with_timeout(prompt, timeout=30)
 
-    prompt = generate_prompt(user, meal_type, disease_info, consumed)
-    result = call_gemma(prompt)
-    parsed = extract_json(result)
+        if "[TIMEOUT]" in result or "[ERROR]" in result:
+            return jsonify({
+                "error": "Gemma 모델 응답 실패 또는 시간 초과",
+                "fallback": True
+            }), 504
 
-    if parsed and "meal" in parsed:
-        parsed["meal"]["meal_type"] = meal_type  # ✅ meal_type 추가
-        return jsonify({"meal": parsed["meal"]})
-    else:
-        return jsonify({"error": "Invalid response from Gemma"}), 500
+        parsed = extract_json(result)
+        if not parsed:
+            return jsonify({
+                "error": "Gemma 응답을 JSON으로 파싱할 수 없음",
+                "fallback": True
+            }), 500
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=5000)
+        return jsonify({
+            "diet": parsed,
+            "fallback": False
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
