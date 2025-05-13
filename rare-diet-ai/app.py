@@ -4,12 +4,14 @@ import json
 from huggingface_hub import login
 from pubmed_fetcher import process_disease
 from gemma_util import call_gemma, extract_json
+from flask_cors import CORS
 
 hf_token = os.getenv("HUGGINGFACE_TOKEN")
 if hf_token:
     login(hf_token)
 
 app = Flask(__name__)
+CORS(app)
 
 def generate_prompt(user_info, meal_type, disease_info, consumed_so_far):
     disease_texts = []
@@ -68,6 +70,7 @@ RESPONSE INSTRUCTIONS — PLEASE FOLLOW STRICTLY:
     "protein": 32.5,
     "carbs": 15.0,
     "fat": 12.0
+    "sodium": 800
   }}
 }}
 
