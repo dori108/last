@@ -5,19 +5,26 @@ import torch
 
 app = FastAPI()
 
-model_id = "google/gemma-7b-it"
-tokenizer = AutoTokenizer.from_pretrained(model_id, token=True)
+# 모델 ID 지정 (2B Instruction-Tuned)
+model_id = "google/gemma-2b-it"
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# 토크나이저 불러오기
+tokenizer = AutoTokenizer.from_pretrained(model_id)
 
+# 디바이스는 CPU로 고정
+device = torch.device("cpu")
+
+# 모델 불러오기 (float32로 설정)
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+    torch_dtype=torch.float32
 ).to(device)
 
+# 사용자 입력 형식 정의
 class Prompt(BaseModel):
-    goal: str
+    goal: str  # 예: "다이어트", "벌크업", "채식"
 
+# POST 요청 처리
 @app.post("/diet")
 def generate_diet(prompt: Prompt):
     input_text = f"오늘의 {prompt.goal} 식단을 추천해줘."
